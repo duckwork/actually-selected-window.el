@@ -1,9 +1,25 @@
-;;; actually-selected-window.el --- tell me dammit! -*- lexical-binding: t; -*-
+;;; actually-selected-window.el --- What window is ACTUALLY selected? -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2021  Case Duckworth
 
 ;; Author: Case Duckworth <acdw@acdw.net>
+;; URL: https://github.com/duckwork/actually-selected-window.el
+;; Package-Version: 1.0.0
+;; Package-Requires: ((emacs "27.1"))
 ;; Keywords: convenience
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -11,25 +27,42 @@
 ;; answer here:
 
 ;; While the mode-line-format is evaluated for a given window, this window is
-;; temporarily made the selected-window. In Emacs<=24.3 this was made only
-;; halfway: selected-window was changed, but not frame-selected-window. This
+;; temporarily made the selected-window.  In Emacs<=24.3 this was made only
+;; halfway: selected-window was changed, but not frame-selected-window.  This
 ;; meant that temporarily (frame-selected-window) was not equal to
 ;; (selected-window) and breaking this (normally) invariant was a source of
-;; various corner case bugs. So we fixed it in 24.4, which means that your code
+;; various corner case bugs.  So we fixed it in 24.4, which means that your code
 ;; broke.
 
-;; The actual code (and hook) I'm using is from ale, who answered just below.
+;; The actual code (and hook) I'm using is from  "ale", who answered just below.
+
+;; UPDATE 2021-12-29: updated per this blog post, which has some other niceties:
+;; https://occasionallycogent.com/custom_emacs_modeline/
 
 ;;; Code:
 
 (defvar actually-selected-window nil
   "Which window is actually selected.")
 
-(defun actually-selected-window-determine ()
+(defun actually-selected-window-set ()
   "Determine which window is actually selected.
-Save the results in `actually-selected-window'."
+Save the results in `actually-selected-window' and update the
+mode-line."
   (when (not (minibuffer-selected-window))
-    (setq actually-selected-window (selected-window))))
+    (setq actually-selected-window (frame-selected-window))
+    (force-mode-line-update)))
+
+(defun actually-selected-window-unset ()
+  "Unset the window selection and update the modeline.
+This is useful when Emacs is unfocused, for example."
+  (setq actually-selected-window nil)
+  (force-mode-line-update))
+
+;;;###autoload
+(defun actually-selected-window-p (&optional window)
+  "Determine whether WINDOW is actually selected.
+WINDOW defaults to `selected-window'."
+  (eq actually-selected-window (or window (selected-window))))
 
 ;;;###autoload
 (define-minor-mode actually-selected-window-mode
@@ -40,9 +73,25 @@ updating mode-lines."
   :init nil
   :lighter ""
   :keymap nil
+  :global t
   (if actually-selected-window-mode
-      (add-hook 'post-command-hook #'actually-selected-window-determine)
-    (remove-hook 'post-command-hook #'actually-selected-window-determine)))
+      (progn                            ; turn on
+        (when (frame-focus-state)
+          (actually-selected-window-set))
+        (add-hook 'window-configuration-change-hook
+                  #'actually-selected-window-set)
+        (add-hook 'focus-in-hook #'actually-selected-window-set)
+        (add-hook 'focus-out-hook #'actually-selected-window-unset)
+        (advice-add 'handle-switch-frame :after #'actually-selected-window-set)
+        (advice-add 'select-window :after #'actually-selected-window-set))
+    ;; turn off
+    (remove-hook 'window-configuration-change-hook
+              #'actually-selected-window-set)
+    (remove-hook 'focus-in-hook #'actually-selected-window-set)
+    (remove-hook 'focus-out-hook #'actually-selected-window-unset)
+    (advice-remove 'handle-switch-frame #'actually-selected-window-set)
+    (advice-remove 'select-window #'actually-selected-window-set)
+    (force-mode-line-update)))
 
 (provide 'actually-selected-window)
 ;;; actually-selected-window.el ends here

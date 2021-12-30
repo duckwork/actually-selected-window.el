@@ -1,0 +1,38 @@
+#+TITLE: actually-selected-window.el
+#+SUBTITLE: What window is ACTUALLY selected?
+
+For the one time you might want to know what window /you've/ selected, and not the
+window =select-window= reports: when evaluating the mode-line.
+
+I'll just quote Stefan's answer from an [[https://stackoverflow.com/questions/26061855/determining-window-focus-in-mode-line][old Stack Overflow question]]:
+
+#+begin_quote
+While the mode-line-format is evaluated for a given window, this window is
+temporarily made the selected-window.  In Emacs<=24.3 this was made only
+halfway: selected-window was changed, but not frame-selected-window.  This meant
+that temporarily (frame-selected-window) was not equal to (selected-window) and
+breaking this (normally) invariant was a source of various corner case bugs.  So
+we fixed it in 24.4, which means that your code broke.
+#+end_quote
+
+I took some code from another answer to that question, and code from [[https://occasionallycogent.com/custom_emacs_modeline/][this blog
+post from Occasionally Cogent]], and wrapped it up in a mode.  Simple.
+
+* Installation
+
+Clone this repository and put it in your =load-path= somewhere, then =require= as normal.
+
+* Usage
+
+1. Enable =actually-selected-window-mode= in your init file.
+2. In your modeline, or wherever you need to know what window is /actually/
+   selected (i.e., selected by the user), call =actually-selected-window-p=.
+
+* Contributing
+
+Pull requests and issues, as always, are welcome!
+
+* License
+
+This package is licensed under the terms of the GNU General Public License,
+version 3.  See LICENSE for the full text.
