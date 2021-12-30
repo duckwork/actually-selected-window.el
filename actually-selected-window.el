@@ -44,7 +44,7 @@
 (defvar actually-selected-window nil
   "Which window is actually selected.")
 
-(defun actually-selected-window-set ()
+(defun actually-selected-window-set (&rest _)
   "Determine which window is actually selected.
 Save the results in `actually-selected-window' and update the
 mode-line."
@@ -52,7 +52,7 @@ mode-line."
     (setq actually-selected-window (frame-selected-window))
     (force-mode-line-update)))
 
-(defun actually-selected-window-unset ()
+(defun actually-selected-window-unset (&rest _)
   "Unset the window selection and update the modeline.
 This is useful when Emacs is unfocused, for example."
   (setq actually-selected-window nil)
