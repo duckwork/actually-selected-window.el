@@ -70,7 +70,6 @@ WINDOW defaults to `selected-window'."
 While you can usually use `selected-window', you can't while
 updating the mode-line because Emacs visits every window when
 updating mode-lines."
-  :init nil
   :lighter ""
   :keymap nil
   :global t
