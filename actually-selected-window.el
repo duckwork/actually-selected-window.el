@@ -52,6 +52,22 @@ mode-line."
     (setq actually-selected-window (frame-selected-window))
     (force-mode-line-update)))
 
+(defun actually-selected-window-set-across-frames ()
+  "Call `actually-selected-window-set' on focused frames.
+This function is intended to be added to
+`after-focus-change-function', which see.
+
+Note that this function doesn't do any debouncing of the frame
+selection, so it might set `actually-selected-window' to the
+selected window on a not-selected frame.  A fix would require
+changing the type of `actually-selected-window' to a list of
+selected windows on frames."
+  (mapc (lambda (frame)
+          (when (frame-focus-state frame)
+            (setq actually-selected-window (frame-selected-window))))
+        (frames-on-display-list))
+  (force-mode-line-update))
+
 (defun actually-selected-window-unset (&rest _)
   "Unset the window selection and update the modeline.
 This is useful when Emacs is unfocused, for example."
@@ -79,15 +95,21 @@ updating mode-lines."
           (actually-selected-window-set))
         (add-hook 'window-configuration-change-hook
                   #'actually-selected-window-set)
-        (add-hook 'focus-in-hook #'actually-selected-window-set)
-        (add-hook 'focus-out-hook #'actually-selected-window-unset)
+        (if (boundp 'after-focus-change-function)
+            (add-function :after after-focus-change-function
+                          #'actually-selected-window-set-across-frames)
+          (add-hook 'focus-in-hook #'actually-selected-window-set)
+          (add-hook 'focus-out-hook #'actually-selected-window-unset))
         (advice-add 'handle-switch-frame :after #'actually-selected-window-set)
         (advice-add 'select-window :after #'actually-selected-window-set))
     ;; turn off
     (remove-hook 'window-configuration-change-hook
-              #'actually-selected-window-set)
-    (remove-hook 'focus-in-hook #'actually-selected-window-set)
-    (remove-hook 'focus-out-hook #'actually-selected-window-unset)
+                 #'actually-selected-window-set)
+    (if (boundp 'after-focus-change-function)
+        (remove-function after-focus-change-function
+                         #'actually-selected-window-set-across-frames)
+      (remove-hook 'focus-in-hook #'actually-selected-window-set)
+      (remove-hook 'focus-out-hook #'actually-selected-window-unset))
     (advice-remove 'handle-switch-frame #'actually-selected-window-set)
     (advice-remove 'select-window #'actually-selected-window-set)
     (force-mode-line-update)))
