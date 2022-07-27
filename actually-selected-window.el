@@ -62,8 +62,9 @@ selection, so it might set `actually-selected-window' to the
 selected window on a not-selected frame.  A fix would require
 changing the type of `actually-selected-window' to a list of
 selected windows on frames."
+  (setq actually-selected-window nil)
   (mapc (lambda (frame)
-          (when (frame-focus-state frame)
+          (when (eq t (frame-focus-state frame))
             (setq actually-selected-window (frame-selected-window))))
         (frames-on-display-list))
   (force-mode-line-update))
